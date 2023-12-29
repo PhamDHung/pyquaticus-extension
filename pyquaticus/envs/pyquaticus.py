@@ -270,8 +270,10 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
         """
         if not hasattr(self, '_state_elements_initialized') or not self._state_elements_initialized:
             raise RuntimeError("Have not registered state elements")
-
+       
+        
         agent = self.players[agent_id]
+
         obs_dict = OrderedDict()
         own_team = agent.team
         own_home_loc = self.flags[int(own_team)].home
@@ -279,6 +281,8 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
         other_team = Team.BLUE_TEAM if own_team == Team.RED_TEAM else Team.RED_TEAM
         obs = OrderedDict()
         np_pos = np.array(agent.pos, dtype=np.float32)
+        np_pos[0] += random.randint(-self.config_dict["gps_noise"][agent_id],self.config_dict["gps_noise"][agent_id])#Add noise to gps position x
+        np_pos[1] += random.randint(-self.config_dict["gps_noise"][agent_id],self.config_dict["gps_noise"][agent_id])#Add noise to gps position y
         # Goal flag
         opponent_home_dist, opponent_home_bearing = mag_bearing_to(
             np_pos, opponent_home_loc, agent.heading
@@ -335,8 +339,10 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
             dif_agents = filter(lambda a: a.id != agent.id, self.agents_of_team[team])
             for i, dif_agent in enumerate(dif_agents):
                 entry_name = f"teammate_{i}" if team == own_team else f"opponent_{i}"
-
-                dif_np_pos = np.array(dif_agent.pos, dtype=np.float32)
+                dif_agent_pos = [dif_agent.pos[0] + random.randint(-self.config_dict["gps_noise"][agent_id],self.config_dict["gps_noise"][agent_id]), 
+                dif_agent.pos[1]+random.randint(-self.config_dict["gps_noise"][agent_id],self.config_dict["gps_noise"][agent_id])]
+                
+                dif_np_pos = np.array(dif_agent_pos, dtype=np.float32)
                 dif_agent_dist, dif_agent_bearing = mag_bearing_to(
                     np_pos, dif_np_pos, agent.heading
                 )
@@ -492,6 +498,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         # set variables from config
         self.set_config_values(self.config_dict)
 
+
         self.state = {}
         self.dones = {}
         self.reset_count = 0
@@ -520,6 +527,11 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                 RenderingPlayer(i, Team.RED_TEAM, (self.agent_radius * self.pixel_size), self.config_dict)
             )
         self.players = {player.id:player for player in itertools.chain(b_players, r_players)}
+        
+        #Assign gps noise to the specified players based on the config_dict's gps_noise that was passed in
+        for agent_id in self.players:
+            if not agent_id in self.config_dict["gps_noise"]:
+                self.config_dict["gps_noise"][agent_id] = 0
 
         self.agents = [agent_id for agent_id in self.players]
         self.possible_agents = self.agents[:]

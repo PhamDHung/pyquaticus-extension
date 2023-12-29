@@ -53,6 +53,10 @@ config_dict_std = {
     ),
     "teleport_on_tag" : False, 
     # Option for the agent when tagged, either out of bounds or by opponent, to teleport home or not
+    "gps_noise": {0:5,1:0}# assigns gps noise to specified agent this will effect all other agents in game random value between [-5, 5]
+                    #Key:agent_id, Value=(size in meters of gps error)
+                    #Default value (not assigned) zero noise will be applied to agents position at time of observation creation
+
 }
 """ Standard configuration setup """
 
