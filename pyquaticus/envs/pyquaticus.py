@@ -146,7 +146,7 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
                     if -0.3 <= self.get_distance_between_2_points(player.pos, self.config_dict["aquaticus_field_points"][action_dict[player.id]]) <= 0.3: #
                         speed = 0.0
                     else:
-                        speed = self.max_speed
+                        speed = 0.375#0.1875#self.max_speed
             else:
                 # if no action provided, stop moving
                 speed, heading = 0.0, player.heading
@@ -498,9 +498,9 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         render_mode: Optional[str] = None,
         render_agent_ids: Optional[bool] = False
     ):
+
         super().__init__()
         self.config_dict = config_dict
-
         #Game score used to determine winner of game for MCTF competition
         #blue_captures: Represents the number of times the blue team has grabbed reds flag and brought it back to their 'home' base
         #blue_tags: The number of times the blue team successfully tagged an opponent
@@ -514,11 +514,10 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
 
         # set variables from config
         self.set_config_values(self.config_dict)
-
         self.state = {}
         self.dones = {}
         self.reset_count = 0
-
+        self.step_num = 0
         self.learning_iteration = 0
 
         self.seed()
@@ -630,6 +629,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
             raise Exception("Call reset before using step method.")
 
         # set the time
+        self.step_num += 1
         self.current_time += self.tau
         self.state["current_time"] = self.current_time
         if not set(raw_action_dict.keys()) <= set(self.players):
@@ -660,7 +660,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         self._check_pickup_flags()
         self._check_agent_captures()
         self._check_flag_captures()
-        if not config_dict_std["teleport_on_tag"]:
+        if not self.config_dict["teleport_on_tag"]:
             self._check_untag()
         self._set_dones()
 
@@ -680,7 +680,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                 truncated = True
         terminated = {agent: terminated for agent in raw_action_dict}
         truncated = {agent: truncated for agent in raw_action_dict}
-
+        
         return obs, rewards, terminated, truncated, info
 
     def _move_agents(self, action_dict, dt):
@@ -762,8 +762,8 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                         self.red_team_flag_pickup = False
                     else:
                         self.blue_team_flag_pickup = False
-                self.state["agent_oob"][player.id] = 1
-                if config_dict_std["teleport_on_tag"]:
+                self.state["agent_oob"][player.id] = self.step_num
+                if self.config_dict["teleport_on_tag"]:
                     player.reset()
                 else:
                     self.state["agent_tagged"][player.id] = 1
@@ -771,7 +771,8 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                     player.rotate()
                 continue
             else:
-                self.state["agent_oob"][player.id] = 0
+                if self.state["agent_oob"][player.id] < self.step_num:
+                    self.state["agent_oob"][player.id] = -1
 
             # check if agent is in keepout region
             ag_dis_2_flag = self.get_distance_between_2_points(
@@ -863,7 +864,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
     def _check_agent_captures(self):
         """Updates player states if they tagged another player."""
         # Reset capture state if teleport_on_tag is true
-        if config_dict_std["teleport_on_tag"] == True:
+        if self.config_dict["teleport_on_tag"] == True:
             self.state["agent_tagged"] = [0] * self.num_agents
             for player in self.players.values():
                 player.is_tagged = False
@@ -898,7 +899,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                             self.state["agent_captures"][player.id] = other_player.id
                             # If we get here, then `player` tagged `other_player` and we need to reset `other_player`
                             # Only if config["teleport_on_capture"] == True
-                            if config_dict_std["teleport_on_tag"]:
+                            if self.config_dict["teleport_on_tag"]:
                                 buffer_sign = (
                                     1.0
                                     if self.flags[o_team].home[0] < self.scrimmage
@@ -1121,6 +1122,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
     def _set_dones(self):
         """Check all of the end game conditions."""
         # Check if all flags of one team are captured
+
         if self.game_score["red_captures"] >= self.max_score:
             self.dones["red"] = True
             self.dones["__all__"] = True
@@ -1130,7 +1132,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
             self.dones["blue"] = True
             self.dones["__all__"] = True
             self.message = "Blue Wins! Red Loses"
-
+        
         elif self.state["current_time"] >= self.max_time:
             self.dones["__all__"] = True
             self.message = "Game Over. No Winner"
@@ -1308,7 +1310,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                 None
             ] * self.num_agents,  # whether this agent tagged something
             "agent_tagged": [0] * self.num_agents,  # if this agent was tagged
-            "agent_oob": [0] * self.num_agents,  # if this agent went out of bounds
+            "agent_oob": [-1] * self.num_agents,  # if this agent went out of bounds
         }
 
         for k in self.game_score:
@@ -1326,7 +1328,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         self.current_time = 0
         self.reset_count += 1
         reset_obs = {agent_id: self.state_to_obs(agent_id, self.normalize) for agent_id in self.players}
-
+        self.config_dict = self.config_dict
         if self.render_mode:
             self._render()
         return reset_obs

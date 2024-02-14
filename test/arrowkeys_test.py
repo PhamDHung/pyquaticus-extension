@@ -27,10 +27,14 @@ import pygame
 from pygame import KEYDOWN, QUIT, K_ESCAPE, K_SPACE, K_LEFT, K_UP, K_RIGHT, K_a, K_w, K_d
 import sys
 import time
+
 from pyquaticus.envs.pyquaticus import Team
 import pyquaticus
 from pyquaticus import pyquaticus_v0
 import pyquaticus.utils.rewards as reward
+from pyquaticus.config import config_dict_std, ACTION_MAP
+
+
 
 class KeyTest:
 
@@ -93,6 +97,7 @@ class KeyTest:
             self.obs, rewards, terminated, truncated, info = self.env.step(action_dict)
             for k in terminated:
                 if terminated[k] == True or truncated[k]==True:
+                    print("Env Ended")
                     time.sleep(1.)
                     self.env.reset()
                     break
@@ -134,9 +139,13 @@ def main():
     reward_config = {0:None, 1:None}
     #Alternative
     #reward_config = {0:reward.sparse, 1:reward.sparse}
-    
+    config_dict = config_dict_std
+    config_dict["max_time"] = 600.0
+    config_dict["max_score"] = 1
+    config_dict["teleport_on_tag"] = True
+   
     #PyQuaticusEnv is a Parallel Petting Zoo Environment
-    env = pyquaticus_v0.PyQuaticusEnv(render_mode='human', team_size=1)
+    env = pyquaticus_v0.PyQuaticusEnv(render_mode='human', team_size=1, config_dict=config_dict)
     red_policy = args.red_policy
 
     kt = KeyTest(env, red_policy)
