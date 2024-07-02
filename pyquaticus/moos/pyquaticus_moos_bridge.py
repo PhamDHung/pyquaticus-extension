@@ -386,6 +386,9 @@ class PyQuaticusMoosBridge(PyQuaticusEnvBase):
         Reads a configuration object to set the field and other configuration variables
         See the default moos_config value in the constructor (__init__)
         """
+        # Initialize base environment parameters before overridding below
+        super().set_config_values({})
+        
         self._moos_config = moos_config
         self._blue_flag = np.asarray(self._moos_config.blue_flag, dtype=np.float32)
         self._red_flag = np.asarray(self._moos_config.red_flag, dtype=np.float32)

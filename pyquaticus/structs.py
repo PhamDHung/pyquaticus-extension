@@ -24,6 +24,11 @@ class Team(Enum):
 
     def __repr__(self):
         return f"{self.name}({self.value})"
+    
+    def get_others(self) -> list:
+        """Returns a list of all Team enums other than this one"""
+        return [obj for obj in Team if obj != self]
+
 
 
 @dataclass
@@ -37,8 +42,10 @@ class Player:
         team: The team of the agent (red or blue)
         thrust: The engine thrust
         pos: The position of the agent [x, y]
+        home: The starting position of the agent [x, y]
         speed: The speed of the agent (m / s)
         heading: The heading of the agent (deg), maritime convention: north is 0, east is 90
+        init_heading: The inital heading of the agent (deg), maritime convention.
         prev_pos: The previous position of the agent
         has_flag: Indicator for whether or not the agent has the flag
         on_own_side: Indicator for whether or not the agent is on its own side of the field.
@@ -51,14 +58,31 @@ class Player:
     team: Team
     thrust: float = field(init=False, default_factory=float)
     pos: list[float] = field(init=False, default_factory=list)
+    home: list[float] = field(init=False, default_factory=list)
     speed: float = field(init=False, default_factory=float)
     heading: float = field(init=False, default_factory=float)
+    init_heading: float = field(init=False, default_factory=float)
     prev_pos: list[float] = field(init=False, default_factory=list)
     has_flag: bool = field(init=False, default=False)
     on_own_side: bool = field(init=False, default=True)
     tagging_cooldown: float = field(init=False)
     cantag_time: float = field(init=False, default=0.0)
     is_tagged: bool = field(init=False, default=False)
+
+    def reset(self):
+        """Method to return a player to their original starting position."""
+        if self.home is None:
+            self.home = [0.0, 0.0]
+        self.prev_pos = copy.deepcopy(self.home)
+        self.pos = copy.deepcopy(self.home)
+        self.speed = 0
+        if self.init_heading is None:
+            self.init_heading = 0
+        self.heading = copy.deepcopy(self.init_heading)
+        self.thrust = 0
+        self.is_tagged = False
+        self.has_flag = False
+        self.on_own_side = True
 
 
 @dataclass
@@ -158,17 +182,7 @@ class RenderingPlayer(Player):
 
     def reset(self):
         """Method to return a player to their original starting position."""
-        self.prev_pos = self.pos
-        self.pos = self.home
-        self.speed = 0
-        if self.team == Team.RED_TEAM:
-            self.heading = 90
-        else:
-            self.heading = -90
-        self.thrust = 0
-        self.is_tagged = False
-        self.has_flag = False
-        self.on_own_side = True
+        return super().reset()
 
     def rotate(self, prev_pos, angle=180):
         """Method to rotate the player 180"""
@@ -217,15 +231,18 @@ class Flag:
         team: The team the flag belongs to
         home: The flags original position at the start of the round/game
         pos: The flags current position
+        taken: Indicator for whether this flag is currently taken by an agent
     """
 
     team: Team
     home: list[float] = field(default_factory=list, init=False)
     pos: list[float] = field(default_factory=list, init=False)
+    taken: bool = field(init=False, default=False)
 
     def reset(self):
         """Resets the flags `pos` to be `home`."""
         self.pos = copy.deepcopy(self.home)
+        self.taken = False
 
 @dataclass
 class Obstacle:
