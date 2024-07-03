@@ -19,4 +19,4 @@
 
 # SPDX-License-Identifier: BSD-3-Clause
 
-from .envs.pyquaticus import PyQuaticusEnv
+from .envs.pyquaticus_game import PyQuaticusEnv

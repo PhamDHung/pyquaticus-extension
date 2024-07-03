@@ -102,6 +102,7 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
         self.max_score = 0
         self.max_speed = 0
         self.agent_radius = 0
+        self.tagging_cooldown = 0
         self.normalize = True
         # set reference variables for world boundaries
         # ll = lower left, lr = lower right
@@ -114,10 +115,12 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
         self.scrimmage = 0.5*self.world_size[0] #horizontal (x) location of scrimmage line (relative to world)
         self.scrimmage_l = np.array([self.scrimmage, 0.0], dtype=np.float32)
         self.scrimmage_u = np.array([self.scrimmage, self.world_size[1]], dtype=np.float32)
-        
-        # Initialize observation normalizer
-        self.agent_obs_normalizer = self._register_state_elements(self.team_size, len(self.obstacles), num_flags)
+        self.set_config_values(config_dict)
 
+        # Initialize observation normalizer
+        self.agent_obs_normalizer = self._register_state_elements(num_flags)
+
+        self.players = self.create_players()
         self.action_spaces = {
             agent_id: self.get_agent_action_space() for agent_id in self.players
         }
@@ -125,8 +128,6 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
             agent_id: self.get_agent_observation_space() for agent_id in self.players
         }
 
-        self.set_config_values(config_dict)
-        self.players = self.create_players()
         self.flags = self.create_flags()
         self.obs_dict = OrderedDict()
         for player_id in self.players.keys():
@@ -154,8 +155,6 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
             for flag in flags:
                 assert isinstance(flag, Flag), f"Expected all flags to be a Flag, not {type(flag)}"
 
-        super().__init__(*args, **kwargs)
-
     def create_players(self) -> Dict[Hashable, Player]:
         raise NotImplementedError
 
@@ -166,7 +165,7 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
         return self.players.get(agent_id, None)
     
     def get_players_of_team(self, team:Team) -> List[Player]:
-        return filter(lambda player: player.team == team, self.players.values())
+        return list(filter(lambda player: player.team == team, self.players.values()))
     
     def get_flags_of_team(self, team:Team) -> List[Flag]:
         return self.flags.get(team, None)
@@ -183,9 +182,7 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
         for flags_of_team in self.flags.values():
             for flag in flags_of_team:
                 flag.reset()
-        
-        return super().reset(seed, options)
-    
+
     def set_config_values(self, config_dict: Dict):
         # set reference variables for world boundaries
         # ll = lower left, lr = lower right
@@ -596,8 +593,8 @@ class PyQuaticusEnvBase(ParallelEnv, ABC):
             return dist
 
         # short walls are at index 1 and 3
-        blue_flag = self.flags[int(Team.BLUE_TEAM)].home
-        red_flag  = self.flags[int(Team.RED_TEAM)].home
+        blue_flag = self.flags[Team.BLUE_TEAM][0].home
+        red_flag  = self.flags[Team.RED_TEAM][0].home
         self._walls = {}
         if dist_from_wall(blue_flag, all_walls[1]) < dist_from_wall(blue_flag, all_walls[3]):
             self._walls[int(Team.BLUE_TEAM)] = all_walls

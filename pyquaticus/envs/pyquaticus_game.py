@@ -97,14 +97,9 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         render_mode: Optional[str] = None,
         render_agent_ids: Optional[bool] = False
     ):
-        super().__init__(team_size, num_flags, config_dict=config_dict)
-
         self.render_mode = render_mode
         self.render_ids = render_agent_ids
-
-        # set variables from config
-        self.set_config_values(self.config_dict)
-
+        super().__init__(team_size, num_flags, config_dict=config_dict)
         self.dones = {}
         self.reset_count = 0
 
@@ -170,10 +165,14 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
     def create_flags(self) -> Dict[Team, List[Flag]]:
         flags = dict()
         for team in Team:
+            flags[team] = list()
             for _ in range(self.num_flags):
                 new_flag = Flag(team)
-                new_flag.home = ...
-                self.flags[team].append(new_flag)
+                if team == Team.BLUE_TEAM:
+                    new_flag.home = ...
+                else:
+                    new_flag.home = ...
+                flags[team].append(new_flag)
         return flags
 
     def step(self, raw_action_dict):
@@ -823,9 +822,12 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
             options: Additonal options for resetting the environment (for now it just contains normalize)
         """
 
-        agent_positions, agent_spd_hdg, agent_on_sides = self._generate_agent_starts()
+        flag_locations = list()
+        for flags in self.flags.values():
+            flag_locations.append([flag.home for flag in flags])
+        agent_positions, agent_spd_hdg, agent_on_sides = self._generate_agent_starts(flag_locations)
 
-        super().reset(seed-seed, options=options)
+        super().reset(seed=seed, options=options)
 
         if return_info:
             raise DeprecationWarning("return_info has been deprecated by PettingZoo -- https://github.com/Farama-Foundation/PettingZoo/pull/890")
@@ -834,10 +836,6 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
 
         self.blue_team_flag_capture = False
         self.red_team_flag_capture = False
-
-        flag_locations = list()
-        for flags in self.flags.values():
-            flag_locations.append([flag.home for flag in flags])
 
         self.reset_state({
             "agent_position": agent_positions,
@@ -857,7 +855,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
             "dist_to_obstacles": dict()
         })
         for agent_id in self.agents:
-            self.state["dist_to_obstacles"][agent_id] = [(0, 0)] * len(self.obstacles)
+            self.get_state()["dist_to_obstacles"][agent_id] = [(0, 0)] * len(self.obstacles)
 
         for k in self.game_score:
             self.game_score[k] = 0
