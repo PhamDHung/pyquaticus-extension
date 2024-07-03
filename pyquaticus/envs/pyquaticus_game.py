@@ -171,7 +171,9 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         flags = dict()
         for team in Team:
             for _ in range(self.num_flags):
-                self.flags[team].append(Flag(team))
+                new_flag = Flag(team)
+                new_flag.home = ...
+                self.flags[team].append(new_flag)
         return flags
 
     def step(self, raw_action_dict):
@@ -510,9 +512,6 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
 
     def _check_flag_captures(self):
         """Updates states if a player captured a flag."""
-        # these are false except at the instance that the flag is captured
-        self.blue_team_flag_capture = False
-        self.red_team_flag_capture = False
         for player in self.players.values():
             if player.on_own_side and player.has_flag:
                 if player.team == Team.BLUE_TEAM:
@@ -528,11 +527,10 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                 player.has_flag = False
                 flags = self.get_flags_of_team(other_team)
                 for flag in flags:
-                    if np.isclose(player.pos, flag.pos):
+                    if np.allclose(player.pos, flag.pos):
                         flag.reset()
                         break
                 self.get_state()["flag_taken"][other_team] = False
-                break
 
     def get_full_state_info(self):
         """Return the full state."""
@@ -553,34 +551,18 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         # set variables from config
         super().set_config_values(config_dict)
         self.pixel_size = config_dict.get("pixel_size", config_dict_std["pixel_size"])
-        self.agent_radius = config_dict.get(
-            "agent_radius", config_dict_std["agent_radius"]
-        )
+        self.agent_radius = config_dict.get("agent_radius", config_dict_std["agent_radius"])
         self.flag_radius = self.agent_radius  # agent and flag radius will be the same
-        self.catch_radius = config_dict.get(
-            "catch_radius", config_dict_std["catch_radius"]
-        )
-        self.flag_keepout = config_dict.get(
-            "flag_keepout", config_dict_std["flag_keepout"]
-        )
-        self.own_side_accel = config_dict.get(
-            "own_side_accel", config_dict_std["own_side_accel"]
-        )
-        self.opp_side_accel = config_dict.get(
-            "opp_side_accel", config_dict_std["opp_side_accel"]
-        )
-        self.wall_bounce = config_dict.get(
-            "wall_bounce", config_dict_std["wall_bounce"]
-        )
+        self.catch_radius = config_dict.get("catch_radius", config_dict_std["catch_radius"])
+        self.flag_keepout = config_dict.get("flag_keepout", config_dict_std["flag_keepout"])
+        self.own_side_accel = config_dict.get("own_side_accel", config_dict_std["own_side_accel"])
+        self.opp_side_accel = config_dict.get("opp_side_accel", config_dict_std["opp_side_accel"])
+        self.wall_bounce = config_dict.get("wall_bounce", config_dict_std["wall_bounce"])
         self.tau = config_dict.get("tau", config_dict_std["tau"])
         self.sim_speedup_factor = config_dict.get("sim_speedup_factor", config_dict_std["sim_speedup_factor"])
         self.max_time = config_dict.get("max_time", config_dict_std["max_time"])
-        self.max_screen_size = config_dict.get(
-            "max_screen_size", config_dict_std["max_screen_size"]
-        )
-        self.random_init = config_dict.get(
-            "random_init", config_dict_std["random_init"]
-        )
+        self.max_screen_size = config_dict.get("max_screen_size", config_dict_std["max_screen_size"])
+        self.random_init = config_dict.get("random_init", config_dict_std["random_init"])
         self.save_traj = config_dict.get("save_traj", config_dict_std["save_traj"])
         self.render_fps = config_dict.get("render_fps", config_dict_std["render_fps"])
         self.normalize = config_dict.get("normalize", config_dict_std["normalize"])
@@ -588,9 +570,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         self.tag_on_wall_collision = config_dict.get("tag_on_wall_collision", config_dict_std["tag_on_wall_collision"])
 
         # MOOS Dynamics Parameters
-        self.speed_factor = config_dict.get(
-            "speed_factor", config_dict_std["speed_factor"]
-        )
+        self.speed_factor = config_dict.get("speed_factor", config_dict_std["speed_factor"])
         self.thrust_map = config_dict.get("thrust_map", config_dict_std["thrust_map"])
         self.max_thrust = config_dict.get("max_thrust", config_dict_std["max_thrust"])
         self.max_rudder = config_dict.get("max_rudder", config_dict_std["max_rudder"])
@@ -842,18 +822,22 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
             seed (optional): Starting seed.
             options: Additonal options for resetting the environment (for now it just contains normalize)
         """
-        super().reset(seed-seed, options=options)
 
-        flag_locations = self.flags.values()
+        agent_positions, agent_spd_hdg, agent_on_sides = self._generate_agent_starts()
+
+        super().reset(seed-seed, options=options)
 
         if return_info:
             raise DeprecationWarning("return_info has been deprecated by PettingZoo -- https://github.com/Farama-Foundation/PettingZoo/pull/890")
 
         self.dones = self._reset_dones()
 
-        agent_positions, agent_spd_hdg, agent_on_sides = self._generate_agent_starts(
-            np.array(flag_locations)
-        )
+        self.blue_team_flag_capture = False
+        self.red_team_flag_capture = False
+
+        flag_locations = list()
+        for flags in self.flags.values():
+            flag_locations.append([flag.home for flag in flags])
 
         self.reset_state({
             "agent_position": agent_positions,
@@ -928,7 +912,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
 
         if self.random_init:
             flags_separation = self.get_distance_between_2_points(
-                flag_locations[0], flag_locations[1]
+                flag_locations[0][0], flag_locations[1][0]
             )
 
         for player in self.players.values():
@@ -961,7 +945,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                     self.get_flags_of_team(other_team)[0]
                     - self.get_flags_of_team(player.team)[0]
                 ) / flags_separation
-                init_pos = flag_locations[int(player.team)] + orientation * (
+                init_pos = flag_locations[int(player.team)][0] + orientation * (
                     flags_separation / 2
                 )
                 agent_shift = agent_shift * orientation
@@ -1032,14 +1016,14 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
             for team in Team:
                 if team != player.team:
                     opponent_flags = self.get_flags_of_team(team)
-                    for idx, flag in opponent_flags:
+                    for idx, flag in enumerate(opponent_flags):
                         flag_vecs[f"opponent_flag_{idx}_dist"] = [
                             flag.pos[0] - player_pos[0],
                             flag.pos[1] - player_pos[1]
                         ]
                 else:
                     team_flags = self.get_flags_of_team(team)
-                    for idx, flag in team_flags:
+                    for idx, flag in enumerate(team_flags):
                         flag_vecs[f"own_flag_{idx}_dist"] = [
                             flag.pos[0] - player_pos[0],
                             flag.pos[1] - player_pos[1]
@@ -1169,12 +1153,12 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         agent_id_blit_poses = {}
 
         for team in Team:
-            flag = self.flags[int(team)]
+            flags = self.flags[team]
             teams_players = self.agents_of_team[team]
             color = "blue" if team == Team.BLUE_TEAM else "red"
 
             # Draw team home region
-            home_center_screen = self.world_to_screen(self.flags[int(team)].home)
+            home_center_screen = self.world_to_screen(flags[0].home)
             draw.circle(
                     self.screen,
                     (0, 0, 0),
@@ -1183,8 +1167,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                     width=round(self.pixel_size / 10),
                 )
 
-            # TODO: Add code for handling multiple flags
-            for flag in self.get_flags_of_team(team):
+            for flag in flags:
                 if not flag.taken:
                     flag_pos_screen = self.world_to_screen(flag.pos)
                     draw.circle(
@@ -1209,31 +1192,6 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
                         flag_pos_screen,
                         0.55*(self.pixel_size * self.agent_radius)
                     )
-            # if not self.state["flag_taken"][int(team)]:
-            #     # Flag is not captured, draw normally.
-            #     flag_pos_screen = self.world_to_screen(flag.pos)
-            #     draw.circle(
-            #         self.screen,
-            #         color,
-            #         flag_pos_screen,
-            #         self.flag_radius * self.pixel_size,
-            #     )
-            #     draw.circle(
-            #         self.screen,
-            #         color,
-            #         flag_pos_screen,
-            #         (self.flag_keepout - self.agent_radius) * self.pixel_size,
-            #         width=round(self.pixel_size / 10),
-            #     )
-            # else:
-            #     # Flag is captured so draw a different shape
-            #     flag_pos_screen = self.world_to_screen(flag.pos)
-            #     draw.circle(
-            #         self.screen,
-            #         color,
-            #         flag_pos_screen,
-            #         0.55*(self.pixel_size * self.agent_radius)
-            #     )
 
             # Draw obstacles:
             for obstacle in self.obstacles:
