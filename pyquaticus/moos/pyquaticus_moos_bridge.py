@@ -70,7 +70,7 @@ class PyQuaticusMoosBridge(PyQuaticusEnvBase):
         if own_team_len != opp_team_len:
             raise ValueError(f"Expecting equal team sizes but got: {own_team_len} vs {opp_team_len}")
 
-        self.agent_obs_normalizer = self._register_state_elements(own_team_len)
+        self.agent_obs_normalizer = self._register_state_elements(own_team_len,0)
 
         self.observation_space = self.get_agent_observation_space()
         self.action_space = self.get_agent_action_space()
