@@ -20,11 +20,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import numpy as np
+import math
 
 from pyquaticus.base_policies.base import BaseAgentPolicy
 from pyquaticus.envs.pyquaticus import config_dict_std, Team
 
-modes = {"nothing", "easy", "medium", "hard", "competition_easy", "competition_medium"}
+modes = {"nothing", "easy", "medium", "hard", "competition_easy", "competition_medium", "easy_patrol"}
 
 
 class BaseDefender(BaseAgentPolicy):
@@ -47,7 +48,7 @@ class BaseDefender(BaseAgentPolicy):
         self.flag_keepout = flag_keepout
         self.catch_radius = catch_radius
         self.using_pyquaticus = using_pyquaticus
-        self.goal = 'PM'
+        self.goal = 'PH'
     def set_mode(self, mode: str):
         """
         Determine which mode the agent is in:
@@ -116,6 +117,31 @@ class BaseDefender(BaseAgentPolicy):
         elif self.mode=="nothing":
             act_index = -1
 
+        elif self.mode == "easy_patrol":
+            if self.team == Team.RED_TEAM:
+                estimated_position = [my_obs["wall_1_distance"], my_obs["wall_0_distance"]]
+            else:
+                estimated_position = [my_obs["wall_3_distance"], my_obs["wall_2_distance"]]
+            value = self.goal
+
+            if self.team == Team.BLUE_TEAM:
+                if 'P' in self.goal:
+                    value = 'S' + value[1:]
+                elif 'S' in self.goal:
+                    value = 'P' + value[1:]
+                if 'X' not in self.goal and self.goal not in ['SH', 'CH', 'PH']:
+                    value += 'X'
+                elif self.goal not in ['SH', 'CH', 'PH']:
+                    value = value[:-1]
+            if my_obs["is_tagged"]:
+                self.goal = 'SH'
+            if -2.5 <= self.get_distance_between_2_points(estimated_position, config_dict_std["aquaticus_field_points"][value]) <= 2.5:
+                if self.goal == 'SH':
+                    self.goal = 'PH'
+                else:
+                    self.goal = 'SH'
+            return self.goal
+
         elif self.mode=="competition_easy":
             if self.team == Team.RED_TEAM:
                 estimated_position = [my_obs["wall_1_distance"], my_obs["wall_0_distance"]]
@@ -152,6 +178,65 @@ class BaseDefender(BaseAgentPolicy):
                     min_enemy_distance = pos[0]
                     closest_enemy = enem
                     enemy_loc = self.rb_to_rect(pos)
+            # If the blue team doesn't have the flag, guard it
+            if self.opp_team_has_flag:
+                # If the blue team has the flag, chase them
+                ag_vect = my_flag_vec
+            elif not closest_enemy == None:
+                ag_vect = enemy_loc
+            else:
+                if self.team == Team.RED_TEAM:
+                    estimated_position = [my_obs["wall_1_distance"], my_obs["wall_0_distance"]]
+                else:
+                    estimated_position = [my_obs["wall_3_distance"], my_obs["wall_2_distance"]]
+                point = 'CH' if self.team == Team.RED_TEAM else  'CHX'
+                if -2.5 <= self.get_distance_between_2_points(estimated_position, config_dict_std["aquaticus_field_points"][point]) <= 2.5:
+                    return -1
+                else:
+                    return 'CH' 
+            try:
+                act_heading = self.angle180(self.vec_to_heading(ag_vect))
+                if 1 >= act_heading >= -1:
+                    act_index = 4
+                elif act_heading < -1:
+                    act_index = 6
+                elif act_heading > 1:
+                    act_index = 2
+            except:
+                act_index = 4
+
+        elif self.mode == "competition_medium_new":
+            my_flag_vec = self.bearing_to_vec(self.my_flag_bearing)
+            #Check if opponents are on teams side
+            min_enemy_distance = 1000.00
+            enemy_dis_dict = {}
+            closest_enemy = None # opponent_home_distance
+            # print(my_obs)
+
+            new_distance = my_obs["own_home_distance"]
+            if new_distance > 20:
+                ag_vect = my_flag_vec
+            else:
+                new_bearing = my_obs["own_home_bearing"]
+
+                new_x = new_distance * math.cos(new_bearing)
+                new_y = new_distance * math.sin(new_bearing)
+                for enem, pos in self.opp_team_pos_dict.items():
+                    # enemy_dist_to_new = my_obs[(enem, "opponent_home_distance")] inn't an observation...
+
+                    enemy_distance = my_obs[(enem, "distance")]
+                    enemy_bearing = my_obs[(enem, "bearing")]
+
+                    enemy_x = enemy_distance * math.cos(enemy_bearing)
+                    enemy_y = enemy_distance * math.sin(enemy_bearing)
+
+                    enemy_dist_to_new = math.sqrt((new_x-enemy_x)**2 + (new_y-enemy_y)**2)
+
+                    enemy_dis_dict[enem] = enemy_dist_to_new # base this on defending target. and remove on_side. replace pos 0 with enemy distance from new
+                    if enemy_dist_to_new < min_enemy_distance: # and not my_obs[(enem, "is_tagged")] == 0:
+                        min_enemy_distance = enemy_dist_to_new
+                        closest_enemy = enem
+                        enemy_loc = self.rb_to_rect(pos)
             # If the blue team doesn't have the flag, guard it
             if self.opp_team_has_flag:
                 # If the blue team has the flag, chase them

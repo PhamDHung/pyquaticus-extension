@@ -1,4 +1,4 @@
-from ctf_gym.base_policies.base import BaseAgentPolicy
+from pyquaticus.base_policies.shield_base import BaseAgentPolicy
 import numpy as np
 
 
@@ -44,7 +44,6 @@ class BaseShield(BaseAgentPolicy):
         for k in opp_target_dists.keys():
             if k != opp_target_idx_1:
                 opp_target_idx_2 = k
-        opp_target_idx_2 = list(opp_target_dists.keys())
 
         #assign defender to attacker1
         opp1_team_dists = {}
@@ -101,6 +100,7 @@ class BaseShield(BaseAgentPolicy):
 
         #get goal vec for defender 2
         have_action_2 = False
+        print(opp_target_idx2id, opp_target_idx_2)
         if obs[opp_target_idx2id[opp_target_idx_2]]["is_tagged"]:
             if obs[opp_target_idx2id[opp_target_idx_1]]["is_tagged"]:
                 action_2 = self.no_op
