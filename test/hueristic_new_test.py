@@ -15,7 +15,7 @@ from pyquaticus.config import config_dict_std, ACTION_MAP
 config_dict = config_dict_std
 config_dict["max_time"] = 600.0
 config_dict["max_score"] = 100
-config_dict["render_agent_ids"] = True
+config_dict["sim_speedup_factor"] = 3
 
 env = pyquaticus_v0.PyQuaticusEnv(team_size=3, config_dict=config_dict,render_mode='human', render_agent_ids=True)
 term_g = {0:False,1:False}
@@ -30,7 +30,7 @@ H_two = BaseDefender(4, Team.RED_TEAM, mode='easy_patrol')
 H_three = BaseAttacker(5, Team.RED_TEAM, mode='competition_medium_new')
 
 R_one = BaseShield(config_dict_std["agent_radius"], config_dict_std["catch_radius"], config_dict_std["world_size"])
-R_two = BaseAttacker(1, Team.BLUE_TEAM, mode='competition_medium')
+R_two = BaseAttacker(1, Team.BLUE_TEAM, mode="competition_medium")
 R_three = BaseShield(config_dict_std["agent_radius"], config_dict_std["catch_radius"], config_dict_std["world_size"])
 step = 0
 while True:

@@ -98,7 +98,7 @@ inc_x = ws[0]/8
 inc_y = ws[1]/4
 config_dict_std["aquaticus_field_points"] ={"PPB":[0,inc_y*4],"PB":[0, inc_y * 3], "CB":[0, inc_y*2], "SB": [0, inc_y*1], "SSB":[0, 0],
                                             "PPF":[inc_x, inc_y*4], "PF":[inc_x, inc_y*3], "CF":[inc_x, inc_y*2], "SF":[inc_x, inc_y], "SSF":[inc_x, 0],
-                                            "PPH":[inc_x*2, inc_y*4], "PH":[inc_x*2, inc_y*3], "CH":[inc_x*2, inc_y*2], "SH":[inc_x*2, inc_y], "SSH":[inc_x*2, 0],
+                                            "PPH":[inc_x*2, inc_y*4], "PH":[inc_x*2, inc_y*3.75], "CH":[inc_x*2, inc_y*2], "SH":[inc_x*2, inc_y*0.25], "SSH":[inc_x*2, 0],
                                             "PPM":[inc_x*3, inc_y*4], "PM":[inc_x*3, inc_y*3], "CM":[inc_x*3, inc_y*2], "SM":[inc_x*3, inc_y], "SSM":[inc_x*3, 0],
                                             "PPC":[inc_x*4, inc_y*4], "PC":[inc_x*4, inc_y*3], "CC":[inc_x*4, inc_y*2], "SC":[inc_x*4, inc_y], "SSC":[inc_x*4, 0],
                                             "PPMX":[inc_x*5, inc_y*4], "PMX":[inc_x*5, inc_y*3], "CMX":[inc_x*5, inc_y*2], "SMX":[inc_x*5, inc_y], "SSMX":[inc_x*5, 0],

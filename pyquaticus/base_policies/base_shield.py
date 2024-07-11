@@ -100,7 +100,6 @@ class BaseShield(BaseAgentPolicy):
 
         #get goal vec for defender 2
         have_action_2 = False
-        print(opp_target_idx2id, opp_target_idx_2)
         if obs[opp_target_idx2id[opp_target_idx_2]]["is_tagged"]:
             if obs[opp_target_idx2id[opp_target_idx_1]]["is_tagged"]:
                 action_2 = self.no_op
