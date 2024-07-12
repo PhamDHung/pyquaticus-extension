@@ -56,10 +56,17 @@ class BaseShield(BaseAgentPolicy):
             if team_id != opp1_team_defender_id:
                 opp2_team_defender_id = team_id
 
+        ### gettting goal vecs ###
+        have_action_1 = False
+        have_action_2 = False
+
+        if obs[opp1_team_defender_id]["is_tagged"]:
+            opp1_team_defender_id = opp2_team_defender_id
+            have_action_2 = True
+
         opp_goal_distances = []
         agent_guard_vecs = []
         #get goal vec for defender 1
-        have_action_1 = False
         if obs[opp_target_idx2id[opp_target_idx_1]]["is_tagged"]:
             if obs[opp_target_idx2id[opp_target_idx_2]]["is_tagged"]:
                 action_1 = self.no_op
@@ -96,10 +103,11 @@ class BaseShield(BaseAgentPolicy):
                 action_1 = self.no_op
             else:
                 action_1 = self.get_action_idx(goal_bearing)
+        else:
+            action_1 = self.no_op
 
 
         #get goal vec for defender 2
-        have_action_2 = False
         if obs[opp_target_idx2id[opp_target_idx_2]]["is_tagged"]:
             if obs[opp_target_idx2id[opp_target_idx_1]]["is_tagged"]:
                 action_2 = self.no_op
@@ -136,6 +144,8 @@ class BaseShield(BaseAgentPolicy):
                 action_2 = self.no_op
             else:
                 action_2 = self.get_action_idx(goal_bearing)
+        else:
+            action_2 = self.no_op
 
         if agent_id == opp1_team_defender_id:
             action_idx = action_1
