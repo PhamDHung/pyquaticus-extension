@@ -1334,6 +1334,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         agent_positions, agent_spd_hdg, agent_on_sides = self._generate_agent_starts(
             np.array(flag_locations)
         )
+        agent_positions[1][0] += self.world_size[0]/20 
 
         self.state = {
             "agent_position": agent_positions,

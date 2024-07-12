@@ -15,7 +15,7 @@ from pyquaticus.config import config_dict_std, ACTION_MAP
 config_dict = config_dict_std
 config_dict["max_time"] = 600.0
 config_dict["max_score"] = 100
-config_dict["sim_speedup_factor"] = 1
+config_dict["sim_speedup_factor"] = 2
 
 env = pyquaticus_v0.PyQuaticusEnv(team_size=3, config_dict=config_dict,render_mode='human', render_agent_ids=True)
 term_g = {0:False,1:False}
