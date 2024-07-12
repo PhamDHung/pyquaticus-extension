@@ -23,7 +23,8 @@ import numpy as np
 import math
 
 from pyquaticus.base_policies.base import BaseAgentPolicy
-from pyquaticus.envs.pyquaticus import config_dict_std, Team
+from pyquaticus.envs.pyquaticus import config_dict_std, Team, ACTION_MAP
+from pyquaticus.utils.utils import mag_bearing_to
 
 modes = {"nothing", "easy", "medium", "hard", "competition_easy", "competition_medium", "easy_patrol"}
 
@@ -403,3 +404,18 @@ class BaseDefender(BaseAgentPolicy):
                 act_index = 4
 
         return act_index
+
+
+def fieldpoint2action(field_point, player_pos, player_heading, team):
+    _, heading = mag_bearing_to(player_pos, config_dict_std["aquaticus_field_points"][field_point], player_heading)
+    if -0.3 <= np.linalg.norm(np.asarray(player_pos) - np.asarray(config_dict_std["aquaticus_field_points"][field_point])) <= 0.3: #
+        speed = 0.0
+    else:
+        speed = 3.5
+
+    action_headings = np.asarray(ACTION_MAP)[:, 1]
+    heading_idx = np.argmin(np.abs(action_headings - heading))
+
+    action_index = ACTION_MAP.index([speed, action_headings[heading_idx]])
+
+    return action_index

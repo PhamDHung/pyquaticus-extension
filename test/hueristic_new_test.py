@@ -4,7 +4,7 @@ import os.path
 import pyquaticus
 from pyquaticus import pyquaticus_v0
 from pyquaticus.base_policies.base_attack import BaseAttacker
-from pyquaticus.base_policies.base_defend import BaseDefender
+from pyquaticus.base_policies.base_defend import BaseDefender, fieldpoint2action
 from pyquaticus.base_policies.base_shield import BaseShield
 from pyquaticus.base_policies.ctf_config import PYQUATICUS_ACTION_MAP
 from pyquaticus.base_policies.base_combined import Heuristic_CTF_Agent
@@ -15,7 +15,7 @@ from pyquaticus.config import config_dict_std, ACTION_MAP
 config_dict = config_dict_std
 config_dict["max_time"] = 600.0
 config_dict["max_score"] = 100
-config_dict["sim_speedup_factor"] = 3
+config_dict["sim_speedup_factor"] = 1
 
 env = pyquaticus_v0.PyQuaticusEnv(team_size=3, config_dict=config_dict,render_mode='human', render_agent_ids=True)
 term_g = {0:False,1:False}
@@ -45,6 +45,7 @@ while True:
 
     three = H_one.compute_action(new_obs)
     four = H_two.compute_action(new_obs)
+    four = fieldpoint2action(four, env.players[4].pos, env.players[4].heading, Team.RED_TEAM)
     five = H_three.compute_action(new_obs)
     zero = PYQUATICUS_ACTION_MAP[R_one.compute_action(new_obs,0, [0, 1, 2], [3,4,5])]
     one = R_two.compute_action(new_obs)

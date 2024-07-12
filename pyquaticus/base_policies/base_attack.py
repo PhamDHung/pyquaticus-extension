@@ -220,39 +220,38 @@ class BaseAttacker(BaseAgentPolicy):
             # Increase the avoidance threshold to start avoiding when farther away
             avoid_thresh = 60.0
             # If I have the flag, go back to my side
-            if self.has_flag :
-                goal_vect = np.multiply(
-                    1.25, self.bearing_to_vec(my_obs["own_home_bearing"])
-                )
-                avoid_vect = self.get_avoid_vect(
-                    self.opp_team_pos, avoid_threshold=avoid_thresh
-                )
-                my_action = goal_vect + (avoid_vect)
+            # if self.has_flag :
+            #     goal_vect = np.multiply(
+            #         1.25, self.bearing_to_vec(my_obs["own_home_bearing"])
+            #     )
+            #     avoid_vect = self.get_avoid_vect(
+            #         self.opp_team_pos, avoid_threshold=avoid_thresh
+            #     )
+            #     my_action = goal_vect + (avoid_vect)
 
             # Otherwise go get the flag
-            else:
-                goal_vect = self.bearing_to_vec(self.opp_flag_bearing)
-                avoid_vect = self.get_avoid_vect(
-                    self.opp_team_pos, avoid_threshold=avoid_thresh
-                )
-                if ((not np.any(goal_vect + (avoid_vect))) or (np.allclose(np.abs(np.abs(goal_vect) - np.abs(avoid_vect)), np.zeros(np.array(goal_vect).shape), atol = 1e-01, rtol=1e-02))):
-                    # Special case where a player is closely in line with the goal
-                    # vector such that the calculated avoid vector nearly negates the
-                    # action (the player is in a spot that causes the agent to just go
-                    # straight into them). In this case just start going towards the top
-                    # or bottom boundary, whichever is farthest.
+            goal_vect = self.bearing_to_vec(self.opp_flag_bearing)
+            avoid_vect = self.get_avoid_vect(
+                self.opp_team_pos, avoid_threshold=avoid_thresh
+            )
+            if ((not np.any(goal_vect + (avoid_vect))) or (np.allclose(np.abs(np.abs(goal_vect) - np.abs(avoid_vect)), np.zeros(np.array(goal_vect).shape), atol = 1e-01, rtol=1e-02))):
+                # Special case where a player is closely in line with the goal
+                # vector such that the calculated avoid vector nearly negates the
+                # action (the player is in a spot that causes the agent to just go
+                # straight into them). In this case just start going towards the top
+                # or bottom boundary, whichever is farthest.
 
-                    top_dist = my_obs["wall_0_distance"]
-                    bottom_dist = my_obs["wall_2_distance"]
+                top_dist = my_obs["wall_0_distance"]
+                bottom_dist = my_obs["wall_2_distance"]
 
-                    # Some bias towards teh bottom boundary to force it to stick with a
-                    # direction.
-                    if top_dist > 1.25 * bottom_dist:
-                        my_action = self.rb_to_rect((top_dist, my_obs["wall_0_bearing"]))
-                    else:
-                        my_action = self.rb_to_rect((bottom_dist, my_obs["wall_2_bearing"]))
+                # Some bias towards teh bottom boundary to force it to stick with a
+                # direction.
+                if top_dist > 1.25 * bottom_dist:
+                    my_action = self.rb_to_rect((top_dist, my_obs["wall_0_bearing"]))
                 else:
-                    my_action = np.multiply(1.25, goal_vect) + avoid_vect
+                    my_action = self.rb_to_rect((bottom_dist, my_obs["wall_2_bearing"]))
+            else:
+                my_action = np.multiply(1.25, goal_vect) + avoid_vect
 
             # Try to convert the heading to a discrete action
             try:
