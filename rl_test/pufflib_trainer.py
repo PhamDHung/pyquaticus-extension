@@ -28,13 +28,17 @@ class PolicyHanlder(nn.Module):
         self.dtype = pufferlib.pytorch.nativize_dtype(env.emulated)
         self.num_actions = env.single_action_space.n
         self.obs_size = env.single_observation_space.n
+        self.policies = {}
+        for k in policy_mapping:
+            if policy_mapping[k] == "ppo":
+                self.policies[k] = 
         
 
 
 
 # from pyquaticus.base_policies.base_policies import DefendGen, AttackGen
 def pyquaticus_creator():
-    reward_config = {0:rew.sparse, 1:rew.sparse, 2:rew.sparse, 3:rew.sparse} 
+    reward_config = {0:rew.sparse, 1:rew.sparse} 
     env = pyquaticus_v0.PyQuaticusEnv(render_mode=None, reward_config=reward_config, team_size=2)
     
     env = pufferlib.wrappers.PettingZooTruncatedWrapper(env=env)
@@ -48,7 +52,7 @@ if __name__ == '__main__':
    # parser.add_argument('--render', help='Enable rendering', action='store_true')
     # Example Reward Config
     #Competitors: reward_config should be updated to reflect how you want to reward your learning agent
-    policy_mapping = {0:"zero", 1: "one", 2: "two", 3:, 4: ,5: }
+    policy_mapping = {0:"ppo", 1: "ppo"}
    # args = parser.parse_args()
     #Vectorization:
     backend = pufferlib.vector.Multiprocessing

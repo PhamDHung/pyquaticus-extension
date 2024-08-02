@@ -95,34 +95,34 @@ import math
 def sparse(self, params, prev_params):
     reward = 0
     # Penalize player for opponent grabbing team flag
-    if params["opponent_flag_pickup"] and not prev_params["opponent_flag_pickup"]:
-        reward += -50
+    # if params["opponent_flag_pickup"] and not prev_params["opponent_flag_pickup"]:
+    #     reward += -50
     # Penalize player for opponent successfully capturing team flag
     if params["opponent_flag_capture"] and not prev_params["opponent_flag_capture"]:
-        reward +=  -100
+        reward +=  -1
     # Reward player for grabbing opponents flag
     if params["team_flag_pickup"] and not prev_params["team_flag_pickup"]:
-        reward += 50
+        reward += 0.5
     # Reward player for capturing opponents flag
     if params["team_flag_capture"] and not prev_params["team_flag_capture"]:
-        reward += 100
+        reward += 1
     # Check to see if agent was tagged
     if params["agent_tagged"][params["agent_id"]]:
-        if prev_params["has_flag"]:
-            reward += -100
-        else:
-            reward += -50
+        reward += -1
+        # if prev_params["has_flag"]:
+            
+        # else:
+        #     reward += -50
     # Check to see if agent tagged an opponent
-    tagged_opponent = params["agent_captures"][params["agent_id"]]
-    if tagged_opponent is not None:
-        if prev_params["opponent_" + str(tagged_opponent) + "_has_flag"]:
-            reward += 50
-        else:
-            reward += 100
+    # tagged_opponent = params["agent_captures"][params["agent_id"]]
+    # if tagged_opponent is not None:
+    #     if prev_params["opponent_" + str(tagged_opponent) + "_has_flag"]:
+    #         reward += 50
+    #     else:
+    #         reward += 100
     # Penalize agent if it went out of bounds (Hit border wall)
     if params["agent_oob"][params["agent_id"]] == 1:
-        reward -= 100
-
+        reward -= 1
     return reward
 
 
