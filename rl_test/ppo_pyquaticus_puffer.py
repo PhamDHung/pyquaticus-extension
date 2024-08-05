@@ -102,7 +102,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class Agent(nn.Module):
+class PPOAgent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
@@ -129,7 +129,37 @@ class Agent(nn.Module):
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+class RandomPolicy():
+    def __init__(self, envs):
+        self.action_space = envs.single_action_space
+    def get_action(self):
+        return self.action_space.sample()
+class PolicyHandler:
+    #Current Policy Types, PPO
+    #policies is a list of strings relating to the algorithm being implemented
+    def __init__(self, policies, envs):
+        self.policies = []
+        self.policy_types = policies
+        #i = 0
+        for p in policies:
+            if p == "ppo":
+                self.policies.append(PPOAgent(envs))
+            elif p == "random":
+                self.policies.append(RandomPolicy(envs))
+            #i+=1
+            #Add Easy
+            #Add Medium
+            #Add Hard
+    def train(self, batch):
+        #Train Step
 
+    def compute_action(self, agent_id)
+        action = None
+        if self.policy_types[agent_id] == "ppo":
+            action = self.policies[agent_id].get_action_and_value(x)
+        elif self.policy_types[agent_id] == "random":
+            action = self.policies[agent_id].get_action()
+        return action
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -170,7 +200,7 @@ if __name__ == "__main__":
         num_envs=args.num_envs,
         num_workers=args.num_envs//2,
     )sert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
-    
+
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
