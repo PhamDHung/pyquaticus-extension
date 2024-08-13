@@ -21,17 +21,17 @@ import numpy as np
 import sys
 import time
 
-class PolicyHanlder(nn.Module):
-    def __init__(self, env, policy_mapping):
-        super().__init__()
-        self.emulated = env.emulated
-        self.dtype = pufferlib.pytorch.nativize_dtype(env.emulated)
-        self.num_actions = env.single_action_space.n
-        self.obs_size = env.single_observation_space.n
-        self.policies = {}
-        for k in policy_mapping:
-            if policy_mapping[k] == "ppo":
-                self.policies[k] = 
+# class PolicyHanlder(nn.Module):
+#     def __init__(self, env, policy_mapping):
+#         super().__init__()
+#         self.emulated = env.emulated
+#         self.dtype = pufferlib.pytorch.nativize_dtype(env.emulated)
+#         self.num_actions = env.single_action_space.n
+#         self.obs_size = env.single_observation_space.n
+#         self.policies = {}
+#         for k in policy_mapping:
+#             if policy_mapping[k] == "ppo":
+#                 self.policies[k] = 
         
 
 
@@ -42,8 +42,8 @@ def pyquaticus_creator():
     env = pyquaticus_v0.PyQuaticusEnv(render_mode=None, reward_config=reward_config, team_size=2)
     
     env = pufferlib.wrappers.PettingZooTruncatedWrapper(env=env)
-    env = pufferlib.postprocess.MultiagentEpisodeStats(env)
-    env = pufferlib.postprocess.MeanOverAgents(env)
+    #env = pufferlib.postprocess.MultiagentEpisodeStats(env)
+    #env = pufferlib.postprocess.MeanOverAgents(env)
     return pufferlib.emulation.PettingZooPufferEnv(env=env)
 
 
@@ -56,9 +56,9 @@ if __name__ == '__main__':
    # args = parser.parse_args()
     #Vectorization:
     backend = pufferlib.vector.Multiprocessing
-    envs = pufferlib.vector.make(pyquaticus_creator, backend=backend, num_envs=2, num_workers=1)
+    envs = pufferlib.vector.make(pyquaticus_creator, backend=backend, num_envs=6, num_workers=2)
     
-    policy = Policy(envs.driver_env)
+    # policy = Policy(envs.driver_env)
     #obs_space = env.observation_space
     #act_space = env.action_space
 
