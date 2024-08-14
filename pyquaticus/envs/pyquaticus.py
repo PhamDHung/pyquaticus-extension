@@ -633,6 +633,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
             raise Exception("Call reset before using step method.")
 
         # set the time
+
         self.current_time += self.sim_speedup_factor * self.tau
         self.state["current_time"] = self.current_time
         if not set(raw_action_dict.keys()) <= set(self.players):
@@ -678,13 +679,10 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         terminated = False
         truncated = False
         if self.dones["__all__"]:
-            if self.dones["blue"] or self.dones["red"]:
-                terminated = True
-            else:
-                truncated = True
+            terminated = True 
+            truncated = False
         terminated = {agent: terminated for agent in raw_action_dict}
         truncated = {agent: truncated for agent in raw_action_dict}
-
         return obs, rewards, terminated, truncated, info
 
     def _move_agents(self, action_dict, dt):
@@ -1162,6 +1160,7 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
             self.message = "Blue Wins! Red Loses"
 
         elif self.state["current_time"] >= self.max_time:
+            #print("Should be setting Dones")
             self.dones["__all__"] = True
             if self.game_score['blue_captures'] > self.game_score['red_captures']:
                 self.message = "Blue Wins! Red Loses"
@@ -1371,10 +1370,10 @@ class PyQuaticusEnv(PyQuaticusEnvBase):
         self.current_time = 0
         self.reset_count += 1
         reset_obs = {agent_id: self.state_to_obs(agent_id, self.normalize) for agent_id in self.players}
-
+        infos = {agent_id: {} for agent_id in self.players}
         if self.render_mode:
             self._render()
-        return reset_obs
+        return reset_obs, infos
 
     def _generate_agent_starts(self, flag_locations):
         """

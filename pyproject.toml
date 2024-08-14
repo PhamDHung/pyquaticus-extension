@@ -37,7 +37,7 @@ authors = [
 ]
 readme = "README.md"
 urls = { repository = "https://div3-gitlab.llan.ll.mit.edu/maestro/pyquaticus" } # FIXME when moved to GitHub
-requires-python = ">=3.8,<=3.11"
+requires-python = ">=3.8,<=3.11.9"
 classifiers = [
 	"Development Status :: 4 - Beta",
 	"Programming Language :: Python",

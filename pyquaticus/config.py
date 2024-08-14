@@ -26,7 +26,7 @@ config_dict_std = {
     ),  # max dt (seconds) for updating the simulation
     "sim_speedup_factor": 1, # simulation speed multiplier (integer >= 1)
     "max_time": 120.0,  # maximum time (seconds) per episode
-    "max_score": 1,     # maximum score per episode (until a winner is declared)
+    "max_score": 5,     # maximum score per episode (until a winner is declared)
     "max_screen_size": get_screen_res(),
     "random_init": (
         False

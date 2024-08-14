@@ -13,8 +13,11 @@ import tyro
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 import pyquaticus
+from pyquaticus import pyquaticus_v0
 import pyquaticus.utils.rewards as rew
-
+import pufferlib
+from pufferlib import wrappers, postprocess
+#from pufferlib.wrapers import PettingZooTruncatedWrapper
 @dataclass
 class Args:
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
@@ -35,13 +38,13 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "CartPole-v1"
+    env_id: str = "pyquaticus"
     """the id of the environment"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 16
+    num_envs: int = 5
     """the number of parallel game environments"""
     num_steps: int = 1000
     """the number of steps to run in each environment per policy rollout"""
@@ -51,7 +54,7 @@ class Args:
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 4
+    num_minibatches: int = 10
     """the number of mini-batches"""
     update_epochs: int = 4
     """the K epochs to update the policy"""
@@ -89,11 +92,11 @@ def make_env():
         # env = gym.wrappers.RecordEpisodeStatistics(env)
         reward_config = {0:rew.sparse, 1:rew.sparse}
         env = pyquaticus_v0.PyQuaticusEnv(render_mode=None, team_size=1, reward_config=reward_config)
-        env = pufferlib.wrappers.PettingZooTruncatedWrapper(env=env)
-        env = pufferlib.postprocess.MultiagentEpisodeStats(env)
-        env = pufferlib.postprocess.MeanOverAgents(env)
-        return pufferlib.emulation.PettingZooPufferEnv(env=env)
-    return thunk
+        env = wrappers.PettingZooTruncatedWrapper(env=env)
+        env = postprocess.MultiagentEpisodeStats(env)
+        env = postprocess.MeanOverAgents(env)
+    return env#pufferlib.emulation.PettingZooPufferEnv(env=env)
+    #return thunk
 
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
@@ -102,64 +105,8 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class PPOAgent(nn.Module):
-    def __init__(self, envs):
-        super().__init__()
-        self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 1), std=1.0),
-        )
-        self.actor = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, envs.single_action_space.n), std=0.01),
-        )
 
-    def get_value(self, x):
-        return self.critic(x)
 
-    def get_action_and_value(self, x, action=None):
-        logits = self.actor(x)
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
-class RandomPolicy():
-    def __init__(self, envs):
-        self.action_space = envs.single_action_space
-    def get_action(self):
-        return self.action_space.sample()
-class PolicyHandler:
-    #Current Policy Types, PPO
-    #policies is a list of strings relating to the algorithm being implemented
-    def __init__(self, policies, envs):
-        self.policies = []
-        self.policy_types = policies
-        #i = 0
-        for p in policies:
-            if p == "ppo":
-                self.policies.append(PPOAgent(envs))
-            elif p == "random":
-                self.policies.append(RandomPolicy(envs))
-            #i+=1
-            #Add Easy
-            #Add Medium
-            #Add Hard
-    def train(self, batch):
-        #Train Step
-
-    def compute_action(self, agent_id)
-        action = None
-        if self.policy_types[agent_id] == "ppo":
-            action = self.policies[agent_id].get_action_and_value(x)
-        elif self.policy_types[agent_id] == "random":
-            action = self.policies[agent_id].get_action()
-        return action
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -193,25 +140,26 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     import pufferlib.vector
     # env setup
-    envs = pufferlib.vector.make(
-        make_env(),
-        env_kwargs=dict(framestack=4),
-        backend=pufferlib.vector.Multiprocessing,
-        num_envs=args.num_envs,
-        num_workers=args.num_envs//2,
-    )sert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
-
-    agent = Agent(envs).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    # envs = pufferlib.vector.make(
+    #     make_env(),
+    #     env_kwargs={},#dict(framestack=4),
+    #     backend=pufferlib.vector.Multiprocessing,
+    #     num_envs=args.num_envs,
+    #     num_workers=args.num_envs//2,
+    # )
+    envs = make_env() 
+    assert isinstance(envs.action_spaces[0], gym.spaces.Discrete), "only discrete action space is supported"
+    import PolicyHandler 
+    agent = PolicyHandler.PolicyHandler(["ppo", "random"], envs, device, args)#Agent(envs).to(device)
+    #optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
+    obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_spaces[0].shape).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs) + envs.action_spaces[0].shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
-
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
@@ -224,18 +172,19 @@ if __name__ == "__main__":
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
             lrnow = frac * args.learning_rate
-            optimizer.param_groups[0]["lr"] = lrnow
+            agent.set_lr(lrnow)
+            #optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
             global_step += args.num_envs
-            obs[step] = next_obs
-            dones[step] = next_done
+            obs[step] = next_obs[0]
+            dones[step] = next_done[0]
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
                 action, logprob, _, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
-            actions[step] = action
+            actions[step] = action[0]
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
@@ -278,7 +227,7 @@ if __name__ == "__main__":
         # Optimizing the policy and value network
         b_inds = np.arange(args.batch_size)
         clipfracs = []
-        for epoch in range(args.update_epochs):
+        '''for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
                 end = start + args.minibatch_size
@@ -327,7 +276,7 @@ if __name__ == "__main__":
                 optimizer.step()
 
             if args.target_kl is not None and approx_kl > args.target_kl:
-                break
+                break'''
 
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
